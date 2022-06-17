@@ -1,6 +1,7 @@
 import re  # разбирем строку на отдельные слова
 from docx import Document  # pip install python-docx
-import pymorphy2  # pip install pymorphy2
+from bs4 import BeautifulSoup  # прасинг xml
+import pymorphy2  # нормализация частей речи
 from collections import Counter  # считаем самые частые слова
 from wordcloud import WordCloud  # pip install wordcloud
 from charset_normalizer import from_path  # нормализуем кодировку
@@ -12,7 +13,13 @@ class App:
 
     def make_text_from_file(self):
         """
-        делает строку из файла TXT или DOCX;
+        TODO: разделить на определение типа файла и получение контента
+              identify_file_extention
+              make_text_from_txt
+              make_text_from_docx
+              make_text_from_fb2
+
+        делает строку из файла TXT, DOCX, FB2;
         пустая строка для остальных расширений
         """
         if self.file_path.endswith(".txt"):
@@ -20,6 +27,12 @@ class App:
         elif self.file_path.endswith(".docx"):
             file = Document(self.file_path)
             self.content = " ".join([p.text for p in file.paragraphs])
+        elif self.file_path.endswith(".fb2"):
+            with open(self.file_path, 'rb') as f:
+                data = f.read()
+            bs_data = BeautifulSoup(data, "xml")
+            sections = bs_data.find_all('section')
+            self.content = " ".join([s.text for s in sections])
         else:
             self.content = ""
 
@@ -29,7 +42,7 @@ class App:
         """
         self.words = re.findall("[а-яё]+", self.content.lower())
 
-    def make_normalized_words(self, *part_of_speech):
+    def make_normalized_words(self, *part_of_speech: str):
         """
         создаем список нормальных форм слов
         для определенных в part_of_speech частей речи
@@ -71,7 +84,7 @@ class App:
         self.wordcloud.to_file(filename)
 
 
-app = App("const.txt")
+app = App("text_long.fb2")
 app.make_text_from_file()
 app.make_words_from_text()
 app.make_normalized_words("NOUN")
